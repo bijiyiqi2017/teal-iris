@@ -27,3 +27,7 @@ pnpm-debug.log*
 
 # Docker
 docker-compose.override.yml
+progress.md
+
+# tmux logs
+tmux-*.log
