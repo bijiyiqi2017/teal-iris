@@ -12,6 +12,8 @@
   "devDependencies": {
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.8",
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
     "husky": "^9.0.11",
     "lint-staged": "^15.2.10",
     "tsx": "^4.21.0"
