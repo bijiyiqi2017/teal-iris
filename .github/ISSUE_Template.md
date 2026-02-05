@@ -19,6 +19,9 @@ A brief summary of what needs to be accomplished and why it's a priority.
 - [ ] Code is covered by unit tests.
 - [ ] Documentation has been updated.
 
+## Are you willing to submit PR?
+- [ ] Yes I am willing to submit a PR!
+
 ##  Resources & Context
 - **Related Issues/PRs:** #
 - **Design Mockups:** [Link here]
