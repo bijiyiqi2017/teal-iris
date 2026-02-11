@@ -3,6 +3,7 @@
 // Check if email exists, Hash password, Save user, Return response
 
 import { ConflictException, Inject, Injectable } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
 import { eq } from "drizzle-orm";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
@@ -17,6 +18,7 @@ export class AuthService {
   constructor(
     @Inject(DRIZZLE)
     private readonly db: NodePgDatabase<typeof schema>,
+    private readonly jwtService: JwtService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -64,5 +66,31 @@ export class AuthService {
 
     // Return safe user profile (no passwordHash)
     return user;
+  }
+
+  async validateUser(email: string, pass: string): Promise<any> {
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (user && (await bcrypt.compare(pass, user.passwordHash))) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { passwordHash, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+
+  async login(user: any) {
+    const payload = { email: user.email, sub: user.id };
+    return {
+      accessToken: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+    };
   }
 }
