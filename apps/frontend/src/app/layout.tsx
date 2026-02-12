@@ -1,6 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import AuthInitializer from "./test-auth/AuthInitializer";
 
 // --- Fonts ---
 const geistSans = Geist({
@@ -30,7 +29,6 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMonoFont.variable} antialiased`}
       >
-        <AuthInitializer />
         {children}
       </body>
     </html>
