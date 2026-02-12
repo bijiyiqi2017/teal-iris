@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { useAuthStore } from "../src/store/useAuthStore"; // ← import store
+import AuthInitializer from "./test-auth/AuthInitializer";
 
 // --- Fonts ---
 const geistSans = Geist({
@@ -22,13 +22,15 @@ export const metadata = {
 // --- Root Layout ---
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
-  // Initialize Auth store
-  useAuthStore.getState().initialize();
-
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMonoFont.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMonoFont.variable} antialiased`}
+      >
+        <AuthInitializer />
         {children}
       </body>
     </html>
