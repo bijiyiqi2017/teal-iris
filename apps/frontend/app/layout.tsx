@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { useAuthStore } from "../src/store/useAuthStore"; // ← import store
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,6 +23,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // ← Initialize Auth store here
+  useAuthStore.getState().initialize();
+
   return (
     <html lang="en">
       <body
