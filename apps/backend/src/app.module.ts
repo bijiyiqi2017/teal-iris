@@ -1,25 +1,11 @@
-// -------------------------------
-// IMPORTS
-// -------------------------------
 import { Module } from "@nestjs/common";
-import { ConfigModule } from "@nestjs/config"; // loads .env
 import { HealthController } from "./modules/health/health.controller.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { DbModule } from "./db/db.module.js";
+import { AppController } from "./app.controller.js";
 
-// -------------------------------
-// APP MODULE
-// -------------------------------
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: "../../.env",
-    }),
-    DbModule,
-    AuthModule,
-  ],
-  controllers: [HealthController],
-  providers: [],
+  imports: [AuthModule, DbModule],
+  controllers: [HealthController, AppController],
 })
 export class AppModule {}

@@ -4,12 +4,11 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  // add more fields later if needed
 }
 
 @Injectable()
 export class UsersService {
-  private users: User[] = []; // in-memory storage for now
+  private users: User[] = [];
 
   // Find a user by email
   findByEmail(email: string): User | undefined {
@@ -27,7 +26,7 @@ export class UsersService {
     return newUser;
   }
 
-  // Optional: list all users
+  // List all users
   findAll(): User[] {
     return this.users;
   }

@@ -34,7 +34,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<SafeUser> {
+  async register(dto: RegisterDto) {
     const {
       email,
       password,
@@ -44,6 +44,7 @@ export class AuthService {
       targetLanguage,
     } = dto;
 
+    // Check if email already exists
     const existingUser = await this.db.query.users.findFirst({
       where: eq(users.email, email),
     });
@@ -78,6 +79,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    // Insert user into database
     const [user] = await this.db
       .insert(users)
       .values({
@@ -98,6 +100,7 @@ export class AuthService {
         createdAt: users.createdAt,
       });
 
+    // Return safe user profile (no passwordHash)
     return user;
   }
 
@@ -115,7 +118,6 @@ export class AuthService {
       throw new UnauthorizedException("The password provided is incorrect");
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...result } = user;
     return result;
   }

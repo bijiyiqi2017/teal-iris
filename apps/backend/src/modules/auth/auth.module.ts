@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // apps/backend/src/modules/auth/auth.module.ts
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
@@ -27,5 +28,15 @@ import { GoogleStrategy } from "./strategies/google.strategy.js";
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
   exports: [AuthService],
+=======
+import { UsersModule as _UsersModule } from "../users/users.module.js";
+import { Module } from "@nestjs/common";
+import { AuthController } from "./auth.controller.js";
+import { AuthService } from "./auth.service.js";
+
+@Module({
+  controllers: [AuthController],
+  providers: [AuthService],
+>>>>>>> 9007d9f (chore(backend): fix ESLint config and clean lint errors)
 })
 export class AuthModule {}
