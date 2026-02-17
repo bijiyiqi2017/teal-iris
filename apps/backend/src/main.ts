@@ -12,7 +12,9 @@ async function bootstrap() {
   const port = process.env.PORT ?? 3000;
 
   const app = await NestFactory.create(AppModule);
-  app.useGlobalPipes(new ValidationPipe());
+
+  // Use global validation pipes
+  app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
 
   await app.listen(port);
   logger.log(`App listening on port ${port}`);
@@ -20,7 +22,9 @@ async function bootstrap() {
   // Optional: log your Google envs for debugging
   logger.log(`GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID}`);
   logger.log(
-    `GOOGLE_CLIENT_SECRET: ${process.env.GOOGLE_CLIENT_SECRET ? "***hidden***" : "MISSING"}`,
+    `GOOGLE_CLIENT_SECRET: ${
+      process.env.GOOGLE_CLIENT_SECRET ? "***hidden***" : "MISSING"
+    }`,
   );
   logger.log(`GOOGLE_CALLBACK_URL: ${process.env.GOOGLE_CALLBACK_URL}`);
 }
