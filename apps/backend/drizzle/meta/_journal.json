@@ -5,22 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1770199841343,
-      "tag": "0000_boring_risque",
+      "when": 1771162500583,
+      "tag": "0000_aspiring_absorbing_man",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1770895822467,
-      "tag": "0001_rainy_killmonger",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1771148507785,
-      "tag": "0002_useful_marvel_boy",
+      "when": 1771308404266,
+      "tag": "0001_wet_patch",
       "breakpoints": true
     }
   ]
