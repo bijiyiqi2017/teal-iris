@@ -1,27 +1,41 @@
-import { Controller, Get, Req, Res, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Request,
+  Req,
+  Res,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from "@nestjs/common";
 import type {
   Request as ExpressRequest,
   Response as ExpressResponse,
 } from "express";
-import { AuthService } from "./auth.service.js";
-import { GoogleAuthGuard } from "./guards/google-auth.guard.js";
-import type { User } from "../users/users.service.js";
-import { UsersService } from "../users/users.service.js";
+
+import { AuthService, SafeUser } from "./auth.service.js";
+import { UsersService, User } from "../users/users.service.js";
 import { ConfigService } from "@nestjs/config";
+
 import { RegisterDto } from "./dto/register.dto.js";
 import { LoginDto } from "./dto/login.dto.js";
+
 import { LocalAuthGuard } from "./guards/local-auth.guard.js";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard.js";
+import { GoogleAuthGuard } from "./guards/google-auth.guard.js";
 
 @Controller("auth")
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly usersService: UsersService,
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService, // injected UsersService
   ) {}
 
-  // --- Local Auth ---
+  // --- Local Authentication ---
+
   @Post("register")
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto) {
@@ -32,7 +46,7 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @HttpCode(HttpStatus.OK)
   async login(@Request() req: { user: SafeUser }, @Body() _dto: LoginDto) {
-    return this.authService.login(req.user as SafeUser);
+    return this.authService.login(req.user);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -42,10 +56,11 @@ export class AuthController {
   }
 
   // --- Google OAuth ---
+
   @Get("google")
   @UseGuards(GoogleAuthGuard)
   googleAuth(): void {
-    // GoogleAuthGuard handles the redirect; no need for req here
+    // GoogleAuthGuard handles redirect
   }
 
   @Get("google/callback")
@@ -54,18 +69,16 @@ export class AuthController {
     @Req() req: ExpressRequest,
     @Res() res: ExpressResponse,
   ): Promise<void> {
-    // Cast req.user to User type
     let user = req.user as User;
 
     if (!user) {
-      // Safety check: if Google didn't provide a user
       res
         .status(401)
         .send("Authentication failed: No user information provided.");
       return;
     }
 
-    // Check if user exists in UsersService, create if not
+    // Check if user exists in DB, create if not
     const existingUser = this.usersService.findByEmail(user.email);
     if (existingUser) {
       user = existingUser;
@@ -73,10 +86,10 @@ export class AuthController {
       user = this.usersService.createUser(user.email, user.name);
     }
 
-    // Generate JWT for the user
+    // Generate JWT
     const token = this.authService.generateJwt(user);
 
-    // Redirect user to frontend with token
+    // Redirect to frontend
     const frontendUrl =
       this.configService.get<string>("FRONTEND_CALLBACK_URL") ||
       "http://localhost:3000/auth/callback";
