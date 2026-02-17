@@ -13,6 +13,7 @@ import { BrowseUsersQueryDto } from "./dto/browse-users-query.dto.js";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard.js";
 
 @Controller("users")
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
