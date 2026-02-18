@@ -31,7 +31,7 @@ services:
       - PORT=3000
       - GOOGLE_CLIENT_ID= ${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET= ${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_CALLBACK_URL= http://localhost:3000/auth/google/callback
+      - GOOGLE_CALLBACK_URL= ${GOOGLE_CALLBACK_URL}
     volumes:
       # Hot reload: sync source code
       - ./apps/backend/src:/app/apps/backend/src

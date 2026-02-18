@@ -80,6 +80,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const verificationToken = randomBytes(32).toString("hex");
+    const verificationTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
     const [user] = await this.db
       .insert(users)
@@ -91,6 +92,7 @@ export class AuthService {
         nativeLanguageId: nativeLang.id,
         targetLanguageId: targetLang.id,
         verificationToken,
+        verificationTokenExpiry,
         emailVerified: null,
       })
       .returning({
@@ -162,11 +164,32 @@ export class AuthService {
       throw new BadRequestException("Invalid or expired verification token");
     }
 
+    if (user.emailVerified) {
+      throw new BadRequestException("Email is already verified");
+    }
+    if (
+      !user.verificationTokenExpiry ||
+      Date.now() > user.verificationTokenExpiry.getTime()
+    ) {
+      await this.db
+        .update(users)
+        .set({
+          verificationToken: null,
+          verificationTokenExpiry: null,
+        })
+        .where(eq(users.id, user.id));
+
+      throw new BadRequestException(
+        "Verification token has expired. Please request a new one.",
+      );
+    }
+
     await this.db
       .update(users)
       .set({
         emailVerified: new Date(),
         verificationToken: null,
+        verificationTokenExpiry: null,
       })
       .where(eq(users.id, user.id));
 
