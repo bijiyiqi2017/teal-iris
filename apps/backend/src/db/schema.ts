@@ -1,21 +1,5 @@
+// apps/backend/src/db/schema.ts
 import { index, jsonb, pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
-
-// --- Users Table (with email verification) ---
-export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
-  firstName: varchar("first_name", { length: 100 }),
-  lastName: varchar("last_name", { length: 100 }),
-  emailVerified: timestamp("email_verified"),
-  verificationToken: varchar("verification_token", { length: 255 }),
-  verificationTokenExpiry: timestamp("verification_token_expiry"),
-  // Language Fields
-  nativeLanguage: varchar("native_language", { length: 10 }).notNull(), // e.g., 'en', 'es'
-  targetLanguage: varchar("target_language", { length: 10 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
 
 // --- Languages Table ---
 export const languages = pgTable("languages", {
@@ -25,8 +9,8 @@ export const languages = pgTable("languages", {
   nativeName: varchar("native_name", { length: 100 }).notNull(),
 });
 
-// --- Users Table (relational version) ---
-export const usersRelational = pgTable(
+// --- Users Table (relational version for profile & language relations) ---
+export const users = pgTable(
   "users",
   {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -42,10 +26,12 @@ export const usersRelational = pgTable(
       .references(() => languages.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    // Optional profile fields
     bio: text("bio"),
     timezone: varchar("timezone", { length: 100 }),
     videoHandles: jsonb("video_handles"),
+    emailVerified: timestamp("email_verified"),
+    verificationToken: varchar("verification_token", { length: 255 }),
+    verificationTokenExpiry: timestamp("verification_token_expiry"),
   },
   (table) => [
     index("users_native_language_id_idx").on(table.nativeLanguageId),

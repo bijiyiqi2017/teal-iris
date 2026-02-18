@@ -1,29 +1,53 @@
 import { Module } from "@nestjs/common";
+import { JwtModule, JwtModuleOptions } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
-import { JwtModule } from "@nestjs/jwt";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import path from "path";
 
 import { AuthController } from "./auth.controller.js";
 import { AuthService } from "./auth.service.js";
 import { JwtStrategy } from "./jwt.strategy.js";
-import { ConfigModule } from "@nestjs/config";
 import { GoogleStrategy } from "./strategies/google.strategy.js";
 
 import { UsersModule } from "../users/users.module.js";
 
 @Module({
   imports: [
-    ConfigModule,
-    PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: "1h" },
+    
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: path.resolve(process.cwd(), ".env"),
     }),
+
+    PassportModule,
+
+    // TS-safe async JWT module registration
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService): JwtModuleOptions => {
+        const secret = configService.get<string>("JWT_SECRET") ?? "fallback-secret";
+        const expiresInEnv = configService.get<string>("JWT_EXPIRATION") ?? "3600";
+
+        let expiresInSeconds: number;
+        if (/^\d+$/.test(expiresInEnv)) {
+          expiresInSeconds = parseInt(expiresInEnv, 10);
+        } else if (/^\d+h$/.test(expiresInEnv)) {
+          expiresInSeconds = parseInt(expiresInEnv, 10) * 3600;
+        } else {
+          expiresInSeconds = 3600;
+        }
+
+        return { secret, signOptions: { expiresIn: expiresInSeconds } };
+      },
+    }),
+
     UsersModule,
   ],
   providers: [
     AuthService,
     JwtStrategy,
-    GoogleStrategy, // keep if you still use Google login
+    GoogleStrategy, // optional if using Google OAuth
   ],
   controllers: [AuthController],
   exports: [AuthService, JwtModule],

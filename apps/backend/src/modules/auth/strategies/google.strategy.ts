@@ -1,8 +1,9 @@
+// apps/backend/src/modules/auth/strategies/google.strategy.ts
 import { Injectable, Logger } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { Strategy, Profile } from "passport-google-oauth20";
-import { UsersService, User } from "../../users/users.service.js";
 import { ConfigService } from "@nestjs/config";
+import { UsersService } from "../../users/users.service.js";
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
@@ -10,9 +11,8 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly configService: ConfigService, // ✅ mark as private for Nest injection
+    private readonly configService: ConfigService,
   ) {
-    // Fetch config values BEFORE calling super
     const clientID = configService.get<string>("GOOGLE_CLIENT_ID");
     const clientSecret = configService.get<string>("GOOGLE_CLIENT_SECRET");
     const callbackURL = configService.get<string>("GOOGLE_CALLBACK_URL");
@@ -30,23 +30,24 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
       scope: ["email", "profile"],
     });
 
-    // Optional: log for debugging
     this.logger.log(`GoogleStrategy initialized with clientID: ${clientID}`);
   }
 
+  // Validate Google profile and return user object
   async validate(
     accessToken: string,
     refreshToken: string,
     profile: Profile,
-  ): Promise<User> {
+  ) {
     const email = profile.emails?.[0]?.value;
     const name = profile.displayName;
 
     if (!email) throw new Error("Google account has no email");
 
-    let user = this.usersService.findByEmail(email);
+    // Check if user exists
+    let user = await this.usersService.findByEmail(email);
     if (!user) {
-      user = this.usersService.createUser(email, name);
+      user = await this.usersService.createUser(email, name);
       this.logger.log(`Created new user: ${email}`);
     } else {
       this.logger.log(`Found existing user: ${email}`);
