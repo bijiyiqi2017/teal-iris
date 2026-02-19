@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from "@nestjs/common";
 import type {
   Request as ExpressRequest,
@@ -85,5 +86,10 @@ export class AuthController {
       "http://localhost:3000/auth/callback";
 
     res.redirect(`${frontendUrl}?token=${token}`);
+  }
+
+  @Get("verify")
+  async verifyEmail(@Query("token") token: string) {
+    return this.authService.verifyEmail(token);
   }
 }

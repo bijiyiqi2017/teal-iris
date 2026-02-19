@@ -8,6 +8,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
+// --- Languages Table ---
 export const languages = pgTable("languages", {
   id: uuid("id").defaultRandom().primaryKey(),
   code: varchar("code", { length: 2 }).notNull().unique(),
@@ -15,6 +16,7 @@ export const languages = pgTable("languages", {
   nativeName: varchar("native_name", { length: 100 }).notNull(),
 });
 
+// --- Users Table ---
 export const users = pgTable(
   "users",
   {
@@ -31,7 +33,7 @@ export const users = pgTable(
       .references(() => languages.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    // Profile fields
+    // Optional profile fields
     bio: text("bio"),
     timezone: varchar("timezone", { length: 100 }),
     videoHandles: jsonb("video_handles"),

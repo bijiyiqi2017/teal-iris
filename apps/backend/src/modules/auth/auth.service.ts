@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Inject,
 } from "@nestjs/common";
+import { randomBytes } from "crypto";
 import { JwtService } from "@nestjs/jwt";
 import { User } from "../users/users.service.js";
 import * as bcrypt from "bcrypt";
@@ -78,6 +79,7 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const verificationToken = randomBytes(32).toString("hex");
 
     const [user] = await this.db
       .insert(users)
@@ -88,6 +90,8 @@ export class AuthService {
         lastName,
         nativeLanguageId: nativeLang.id,
         targetLanguageId: targetLang.id,
+        verificationToken,
+        emailVerified: null,
       })
       .returning({
         id: users.id,
@@ -98,6 +102,10 @@ export class AuthService {
         targetLanguageId: users.targetLanguageId,
         createdAt: users.createdAt,
       });
+
+    // Log verification URL (replace with email sending in production)
+    const verificationUrl = `http://localhost:3000/auth/verify-email?token=${verificationToken}`;
+    console.log("Email verification URL:", verificationUrl);
 
     return user;
   }
@@ -118,8 +126,13 @@ export class AuthService {
       throw new UnauthorizedException("User with this email was not found");
     }
 
-    const isMatch = await bcrypt.compare(pass, user.passwordHash);
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        "Please verify your email before logging in",
+      );
+    }
 
+    const isMatch = await bcrypt.compare(pass, user.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedException("The password provided is incorrect");
     }
@@ -138,5 +151,25 @@ export class AuthService {
         email: user.email,
       },
     };
+  }
+
+  async verifyEmail(token: string) {
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.verificationToken, token),
+    });
+
+    if (!user) {
+      throw new BadRequestException("Invalid or expired verification token");
+    }
+
+    await this.db
+      .update(users)
+      .set({
+        emailVerified: new Date(),
+        verificationToken: null,
+      })
+      .where(eq(users.id, user.id));
+
+    return { message: "Email successfully verified" };
   }
 }
