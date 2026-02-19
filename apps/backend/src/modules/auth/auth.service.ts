@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../../db/db.module.js";
 import * as schema from "../../db/schema.js";
-import { usersRelational as users, languages } from "../../db/schema.js";
+import { users as users, languages } from "../../db/schema.js";
 import * as bcrypt from "bcrypt";
 
 export interface SafeUser {

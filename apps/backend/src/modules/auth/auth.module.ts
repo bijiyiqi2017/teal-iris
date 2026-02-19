@@ -6,30 +6,28 @@ import path from "path";
 
 import { AuthController } from "./auth.controller.js";
 import { AuthService } from "./auth.service.js";
-import { JwtStrategy } from "./jwt.strategy.js";
+import { LocalStrategy } from "./strategies/local.strategy.js";
+import { JwtStrategy } from "./strategies/jwt.strategy.js";
 import { GoogleStrategy } from "./strategies/google.strategy.js";
-
-import { UsersModule } from "../users/users.module.js";
 
 @Module({
   imports: [
-    
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: path.resolve(process.cwd(), ".env"),
+      envFilePath: path.resolve(process.cwd(), "../../.env"),
     }),
-
     PassportModule,
-
-    // TS-safe async JWT module registration
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService): JwtModuleOptions => {
-        const secret = configService.get<string>("JWT_SECRET") ?? "fallback-secret";
-        const expiresInEnv = configService.get<string>("JWT_EXPIRATION") ?? "3600";
+        const secret =
+          configService.get<string>("JWT_SECRET") ?? "fallback-secret";
+        const expiresInEnv =
+          configService.get<string>("JWT_EXPIRATION") ?? "3600";
 
         let expiresInSeconds: number;
+
         if (/^\d+$/.test(expiresInEnv)) {
           expiresInSeconds = parseInt(expiresInEnv, 10);
         } else if (/^\d+h$/.test(expiresInEnv)) {
@@ -38,18 +36,17 @@ import { UsersModule } from "../users/users.module.js";
           expiresInSeconds = 3600;
         }
 
-        return { secret, signOptions: { expiresIn: expiresInSeconds } };
+        return {
+          secret,
+          signOptions: {
+            expiresIn: expiresInSeconds,
+          },
+        };
       },
     }),
-
-    UsersModule,
-  ],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    GoogleStrategy, // optional if using Google OAuth
   ],
   controllers: [AuthController],
-  exports: [AuthService, JwtModule],
+  providers: [AuthService, LocalStrategy, JwtStrategy, GoogleStrategy],
+  exports: [AuthService],
 })
 export class AuthModule {}
