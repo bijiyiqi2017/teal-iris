@@ -11,10 +11,6 @@ import {
   HttpStatus,
   Query,
 } from "@nestjs/common";
-import type {
-  Request as ExpressRequest,
-  Response as ExpressResponse,
-} from "express";
 
 import { AuthService, SafeUser } from "./auth.service.js";
 import { UsersService, User } from "../users/users.service.js";
@@ -26,6 +22,11 @@ import { LoginDto } from "./dto/login.dto.js";
 import { LocalAuthGuard } from "./guards/local-auth.guard.js";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard.js";
 import { GoogleAuthGuard } from "./guards/google-auth.guard.js";
+
+import type {
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from "express";
 
 @Controller("auth")
 export class AuthController {

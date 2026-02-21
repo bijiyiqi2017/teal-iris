@@ -1,5 +1,15 @@
-// apps/backend/src/db/schema.ts
-import { index, jsonb, pgTable, uuid, varchar, text, timestamp } from "drizzle-orm/pg-core";
+// Placeholder for Drizzle schema
+// Will be populated in Phase 2 when Docker/PostgreSQL is set up
+
+import {
+  index,
+  jsonb,
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 // --- Languages Table ---
 export const languages = pgTable("languages", {
@@ -18,6 +28,9 @@ export const users = pgTable(
     passwordHash: text("password_hash").notNull(),
     firstName: varchar("first_name", { length: 100 }),
     lastName: varchar("last_name", { length: 100 }),
+    emailVerified: timestamp("email_verified"),
+    verificationToken: varchar("verification_token", { length: 255 }),
+    verificationTokenExpiry: timestamp("verification_token_expiry"),
     nativeLanguageId: uuid("native_language_id")
       .notNull()
       .references(() => languages.id, { onDelete: "restrict" }),
@@ -29,9 +42,6 @@ export const users = pgTable(
     bio: text("bio"),
     timezone: varchar("timezone", { length: 100 }),
     videoHandles: jsonb("video_handles"),
-    emailVerified: timestamp("email_verified"),
-    verificationToken: varchar("verification_token", { length: 255 }),
-    verificationTokenExpiry: timestamp("verification_token_expiry"),
   },
   (table) => [
     index("users_native_language_id_idx").on(table.nativeLanguageId),

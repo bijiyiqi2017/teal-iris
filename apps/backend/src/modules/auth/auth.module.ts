@@ -14,7 +14,7 @@ import { GoogleStrategy } from "./strategies/google.strategy.js";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: path.resolve(process.cwd(), "../../.env"),
+      envFilePath: path.resolve(process.cwd(), "../../.env"), // keep upstream comment
     }),
     PassportModule,
     JwtModule.registerAsync({
@@ -26,8 +26,8 @@ import { GoogleStrategy } from "./strategies/google.strategy.js";
         const expiresInEnv =
           configService.get<string>("JWT_EXPIRATION") ?? "3600";
 
+        // Convert to number of seconds
         let expiresInSeconds: number;
-
         if (/^\d+$/.test(expiresInEnv)) {
           expiresInSeconds = parseInt(expiresInEnv, 10);
         } else if (/^\d+h$/.test(expiresInEnv)) {

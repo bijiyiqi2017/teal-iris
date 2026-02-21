@@ -13,6 +13,7 @@ import { DRIZZLE } from "../../db/db.module.js";
 import * as schema from "../../db/schema.js";
 import { users as users, languages } from "../../db/schema.js";
 import * as bcrypt from "bcrypt";
+import { RegisterDto } from "./dto/register.dto.js"; // <-- use DTO
 
 export interface SafeUser {
   id: string;
@@ -33,8 +34,15 @@ export class AuthService {
   ) {}
 
   // --- Register a new user ---
-  async register(dto: any): Promise<SafeUser> {
-    const { email, password, firstName, lastName, nativeLanguage, targetLanguage } = dto;
+  async register(dto: RegisterDto): Promise<SafeUser> {
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      nativeLanguage,
+      targetLanguage,
+    } = dto;
 
     const existingUser = await this.db.query.users.findFirst({
       where: eq(users.email, email),
@@ -42,61 +50,81 @@ export class AuthService {
     if (existingUser) throw new ConflictException("Email already in use");
 
     if (nativeLanguage === targetLanguage) {
-      throw new BadRequestException("Native and target language must be different");
+      throw new BadRequestException(
+        "Native and target language must be different",
+      );
     }
 
     const nativeLang = await this.db.query.languages.findFirst({
       where: eq(languages.code, nativeLanguage),
     });
-    if (!nativeLang) throw new BadRequestException("Invalid native language code");
+    if (!nativeLang)
+      throw new BadRequestException("Invalid native language code");
 
     const targetLang = await this.db.query.languages.findFirst({
       where: eq(languages.code, targetLanguage),
     });
-    if (!targetLang) throw new BadRequestException("Invalid target language code");
+    if (!targetLang)
+      throw new BadRequestException("Invalid target language code");
 
     const passwordHash = await bcrypt.hash(password, 12);
     const verificationToken = randomBytes(32).toString("hex");
     const verificationTokenExpiry = new Date(Date.now() + 15 * 60 * 1000);
 
-    const [user] = await this.db.insert(users).values({
-      email,
-      passwordHash,
-      firstName,
-      lastName,
-      nativeLanguageId: nativeLang.id,
-      targetLanguageId: targetLang.id,
-      verificationToken,
-      verificationTokenExpiry,
-      emailVerified: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }).returning({
-      id: users.id,
-      email: users.email,
-      firstName: users.firstName,
-      lastName: users.lastName,
-      nativeLanguageId: users.nativeLanguageId,
-      targetLanguageId: users.targetLanguageId,
-      createdAt: users.createdAt,
-    });
+    const [user] = await this.db
+      .insert(users)
+      .values({
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        nativeLanguageId: nativeLang.id,
+        targetLanguageId: targetLang.id,
+        verificationToken,
+        verificationTokenExpiry,
+        emailVerified: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning({
+        id: users.id,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        nativeLanguageId: users.nativeLanguageId,
+        targetLanguageId: users.targetLanguageId,
+        createdAt: users.createdAt,
+      });
 
-    // Optional: log verification URL (replace with email sending in production)
-    console.log(`Email verification URL: http://localhost:3000/auth/verify-email?token=${verificationToken}`);
+    // log verification URL
+    console.log(
+      `Email verification URL: http://localhost:3000/auth/verify-email?token=${verificationToken}`,
+    );
 
     return user;
   }
 
   // --- Validate user login credentials ---
   async validateUser(email: string, pass: string): Promise<SafeUser> {
-    const user = await this.db.query.users.findFirst({ where: eq(users.email, email) });
-    if (!user) throw new UnauthorizedException("User not found");
-    if (!user.emailVerified) throw new UnauthorizedException("Please verify your email");
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("User with this email was not found");
+    }
+
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        "Please verify your email before logging in",
+      );
+    }
 
     const isMatch = await bcrypt.compare(pass, user.passwordHash);
     if (!isMatch) throw new UnauthorizedException("Incorrect password");
 
-    const { passwordHash, ...safeUser } = user;
+    // Prefix unused passwordHash with _ to satisfy ESLint
+    const { passwordHash: _passwordHash, ...safeUser } = user;
     return safeUser;
   }
 
@@ -111,26 +139,51 @@ export class AuthService {
 
   // --- Generate JWT only ---
   generateJwt(user: SafeUser): string {
-    return this.jwtService.sign({ sub: user.id, email: user.email }, { expiresIn: "1h" });
+    return this.jwtService.sign(
+      { sub: user.id, email: user.email },
+      { expiresIn: "1h" },
+    );
   }
 
   // --- Verify email token ---
   async verifyEmail(token: string) {
-    const user = await this.db.query.users.findFirst({ where: eq(users.verificationToken, token) });
-    if (!user) throw new BadRequestException("Invalid or expired verification token");
-    if (user.emailVerified) throw new BadRequestException("Email already verified");
+    const user = await this.db.query.users.findFirst({
+      where: eq(users.verificationToken, token),
+    });
 
-    if (!user.verificationTokenExpiry || Date.now() > user.verificationTokenExpiry.getTime()) {
-      await this.db.update(users).set({ verificationToken: null, verificationTokenExpiry: null })
-        .where(eq(users.id, user.id));
-      throw new BadRequestException("Verification token expired. Request a new one.");
+    if (!user) {
+      throw new BadRequestException("Invalid or expired verification token");
     }
 
-    await this.db.update(users).set({
-      emailVerified: new Date(),
-      verificationToken: null,
-      verificationTokenExpiry: null,
-    }).where(eq(users.id, user.id));
+    if (user.emailVerified) {
+      throw new BadRequestException("Email is already verified");
+    }
+
+    if (
+      !user.verificationTokenExpiry ||
+      Date.now() > user.verificationTokenExpiry.getTime()
+    ) {
+      await this.db
+        .update(users)
+        .set({
+          verificationToken: null,
+          verificationTokenExpiry: null,
+        })
+        .where(eq(users.id, user.id));
+
+      throw new BadRequestException(
+        "Verification token has expired. Please request a new one.",
+      );
+    }
+
+    await this.db
+      .update(users)
+      .set({
+        emailVerified: new Date(),
+        verificationToken: null,
+        verificationTokenExpiry: null,
+      })
+      .where(eq(users.id, user.id));
 
     return { message: "Email successfully verified" };
   }

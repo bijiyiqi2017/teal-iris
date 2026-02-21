@@ -1,4 +1,3 @@
-// apps/backend/src/modules/auth/strategies/google.strategy.ts
 import { Injectable, Logger } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { Strategy, Profile } from "passport-google-oauth20";
@@ -29,7 +28,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
 
   async validate(
     accessToken: string,
-    refreshToken: string,
+    _refreshToken: string | undefined,
     profile: Profile,
   ) {
     const email = profile.emails?.[0]?.value;
