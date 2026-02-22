@@ -1,6 +1,3 @@
-// Placeholder for Drizzle schema
-// Will be populated in Phase 2 when Docker/PostgreSQL is set up
-
 import {
   index,
   jsonb,
@@ -19,29 +16,41 @@ export const languages = pgTable("languages", {
   nativeName: varchar("native_name", { length: 100 }).notNull(),
 });
 
-// --- Users Table (relational version for profile & language relations) ---
+// --- Users Table ---
 export const users = pgTable(
   "users",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+
     email: varchar("email", { length: 255 }).notNull().unique(),
     passwordHash: text("password_hash").notNull(),
+
     firstName: varchar("first_name", { length: 100 }),
     lastName: varchar("last_name", { length: 100 }),
+
     emailVerified: timestamp("email_verified"),
     verificationToken: varchar("verification_token", { length: 255 }),
     verificationTokenExpiry: timestamp("verification_token_expiry"),
+
     nativeLanguageId: uuid("native_language_id")
       .notNull()
       .references(() => languages.id, { onDelete: "restrict" }),
+
     targetLanguageId: uuid("target_language_id")
       .notNull()
       .references(() => languages.id, { onDelete: "restrict" }),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
+
     bio: text("bio"),
     timezone: varchar("timezone", { length: 100 }),
-    videoHandles: jsonb("video_handles"),
+
+    // ✅ FIX: Strongly type JSONB column
+    videoHandles: jsonb("video_handles")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
   },
   (table) => [
     index("users_native_language_id_idx").on(table.nativeLanguageId),

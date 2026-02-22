@@ -1,35 +1,109 @@
-import { Injectable, NotFoundException, Inject } from "@nestjs/common";
-import { eq, ne, and, count, SQL } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { Injectable, Inject, NotFoundException } from "@nestjs/common";
+import { eq, ne, and, count } from "drizzle-orm";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
+
 import * as schema from "../../db/schema.js";
 import { DRIZZLE } from "../../db/db.module.js";
 import { users, languages } from "../../db/schema.js";
-import { UpdateProfileDto } from "./dto/update-profile.dto.js";
-import { BrowseUsersQueryDto } from "./dto/browse-users-query.dto.js";
+
+// Add createdAt and updatedAt fields for full User type
+export interface User {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  nativeLanguageId: string;
+  targetLanguageId: string;
+  bio?: string | null;
+  timezone?: string | null;
+  videoHandles: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 @Injectable()
 export class UsersService {
-  constructor(@Inject(DRIZZLE) private db: NodePgDatabase<typeof schema>) {}
+  constructor(
+    @Inject(DRIZZLE)
+    private readonly db: NodePgDatabase<typeof schema>,
+  ) {}
 
-  async browseUsers(currentUserId: string, query: BrowseUsersQueryDto) {
-    const { page = 1, limit = 10, learning, speaking } = query;
+  async findByEmail(email: string) {
+    return this.db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+  }
+
+  async createUser(email: string, name?: string) {
+    const firstName = name?.split(" ")[0] ?? null;
+    const lastName = name?.split(" ")[1] ?? null;
+
+    const defaultLanguage = await this.db.query.languages.findFirst({
+      where: eq(languages.code, "en"),
+    });
+
+    if (!defaultLanguage) {
+      throw new Error("Default language 'en' not found in database");
+    }
+
+    const [newUser] = await this.db
+      .insert(users)
+      .values({
+        email,
+        passwordHash: "",
+        firstName,
+        lastName,
+        nativeLanguageId: defaultLanguage.id,
+        targetLanguageId: defaultLanguage.id,
+        bio: null,
+        timezone: null,
+        videoHandles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return newUser;
+  }
+
+  async getProfile(userId: string) {
+    const profile = await this.db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+
+    if (!profile) {
+      throw new NotFoundException("User profile not found");
+    }
+
+    return {
+      ...profile,
+      videoHandles: profile.videoHandles ?? [],
+    };
+  }
+
+  async updateProfile(userId: string, dto: Partial<typeof users.$inferInsert>) {
+    const [updatedUser] = await this.db
+      .update(users)
+      .set({
+        ...dto,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (!updatedUser) {
+      throw new NotFoundException("User profile not found");
+    }
+
+    return {
+      ...updatedUser,
+      videoHandles: updatedUser.videoHandles ?? [],
+    };
+  }
+
+  async browseUsers(currentUserId: string, page = 1, limit = 10) {
     const offset = (page - 1) * limit;
-
-    const nativeLang = alias(languages, "native_lang");
-    const targetLang = alias(languages, "target_lang");
-
-    const conditions: SQL[] = [ne(users.id, currentUserId)];
-
-    if (learning) {
-      conditions.push(eq(targetLang.code, learning));
-    }
-
-    if (speaking) {
-      conditions.push(eq(nativeLang.code, speaking));
-    }
-
-    const whereClause = and(...conditions);
+    const whereClause = and(ne(users.id, currentUserId));
 
     const [data, [{ totalCount }]] = await Promise.all([
       this.db
@@ -39,31 +113,23 @@ export class UsersService {
           lastName: users.lastName,
           bio: users.bio,
           timezone: users.timezone,
-          nativeLanguage: {
-            code: nativeLang.code,
-            name: nativeLang.name,
-          },
-          targetLanguage: {
-            code: targetLang.code,
-            name: targetLang.name,
-          },
+          videoHandles: users.videoHandles,
+          nativeLanguageId: users.nativeLanguageId,
+          targetLanguageId: users.targetLanguageId,
         })
         .from(users)
-        .leftJoin(nativeLang, eq(users.nativeLanguageId, nativeLang.id))
-        .leftJoin(targetLang, eq(users.targetLanguageId, targetLang.id))
         .where(whereClause)
         .limit(limit)
         .offset(offset),
-      this.db
-        .select({ totalCount: count() })
-        .from(users)
-        .leftJoin(nativeLang, eq(users.nativeLanguageId, nativeLang.id))
-        .leftJoin(targetLang, eq(users.targetLanguageId, targetLang.id))
-        .where(whereClause),
+
+      this.db.select({ totalCount: count() }).from(users).where(whereClause),
     ]);
 
     return {
-      data,
+      data: data.map((u) => ({
+        ...u,
+        videoHandles: u.videoHandles ?? [],
+      })),
       meta: {
         page,
         limit,
@@ -71,49 +137,5 @@ export class UsersService {
         totalPages: Math.ceil(totalCount / limit),
       },
     };
-  }
-
-  async getProfile(userId: string) {
-    const profile = await this.db.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: {
-        passwordHash: false,
-      },
-    });
-
-    if (!profile) {
-      throw new NotFoundException("User profile not found");
-    }
-
-    return profile;
-  }
-
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
-    const [updatedUser] = await this.db
-      .update(users)
-      .set({
-        ...dto,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning({
-        id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        nativeLanguageId: users.nativeLanguageId,
-        targetLanguageId: users.targetLanguageId,
-        bio: users.bio,
-        timezone: users.timezone,
-        videoHandles: users.videoHandles,
-        createdAt: users.createdAt,
-        updatedAt: users.updatedAt,
-      });
-
-    if (!updatedUser) {
-      throw new NotFoundException("User profile not found");
-    }
-
-    return updatedUser;
   }
 }
