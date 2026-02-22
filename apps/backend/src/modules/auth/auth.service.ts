@@ -26,7 +26,7 @@ export class AuthService {
   // -----------------------
   // REGISTER
   // -----------------------
-  async register(email: string, password: string, name?: string) {
+  async register(email: string, _password: string, name?: string) {
     const existingUser = await this.usersService.findByEmail(email);
 
     if (existingUser) {
@@ -34,9 +34,6 @@ export class AuthService {
     }
 
     const user = await this.usersService.createUser(email, name);
-
-    // If you later store passwordHash in DB, update it here.
-
     const safeUser = this.toSafeUser(user);
 
     return {
@@ -59,7 +56,7 @@ export class AuthService {
   // OAUTH VALIDATION
   // -----------------------
   async validateOAuthUser(email: string, name?: string): Promise<SafeUser> {
-    let user: User | null = await this.usersService.findByEmail(email);
+    let user = await this.usersService.findByEmail(email);
 
     if (!user) {
       user = await this.usersService.createUser(email, name);

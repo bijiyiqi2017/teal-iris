@@ -6,7 +6,14 @@ import {
   varchar,
   text,
   timestamp,
+  pgEnum,
 } from "drizzle-orm/pg-core";
+
+// --- Connection Status Enum ---
+export const connectionStatusEnum = pgEnum("connection_status", [
+  "PENDING",
+  "ACCEPTED",
+]);
 
 // --- Languages Table ---
 export const languages = pgTable("languages", {
@@ -46,7 +53,6 @@ export const users = pgTable(
     bio: text("bio"),
     timezone: varchar("timezone", { length: 100 }),
 
-    // ✅ FIX: Strongly type JSONB column
     videoHandles: jsonb("video_handles")
       .$type<string[]>()
       .notNull()
@@ -55,5 +61,30 @@ export const users = pgTable(
   (table) => [
     index("users_native_language_id_idx").on(table.nativeLanguageId),
     index("users_target_language_id_idx").on(table.targetLanguageId),
+  ],
+);
+
+// --- Connections Table ---
+export const connections = pgTable(
+  "connections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    receiverId: uuid("receiver_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    status: connectionStatusEnum("status").default("PENDING").notNull(),
+
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("connections_sender_id_idx").on(table.senderId),
+    index("connections_receiver_id_idx").on(table.receiverId),
   ],
 );

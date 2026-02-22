@@ -6,7 +6,6 @@ import * as schema from "../../db/schema.js";
 import { DRIZZLE } from "../../db/db.module.js";
 import { users, languages } from "../../db/schema.js";
 
-// Add createdAt and updatedAt fields for full User type
 export interface User {
   id: string;
   email: string;
@@ -28,13 +27,26 @@ export class UsersService {
     private readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
-  async findByEmail(email: string) {
-    return this.db.query.users.findFirst({
+  // -----------------------
+  // FIND BY EMAIL
+  // -----------------------
+  async findByEmail(email: string): Promise<User | null> {
+    const user = await this.db.query.users.findFirst({
       where: eq(users.email, email),
     });
+
+    if (!user) return null;
+
+    return {
+      ...user,
+      videoHandles: user.videoHandles ?? [],
+    };
   }
 
-  async createUser(email: string, name?: string) {
+  // -----------------------
+  // CREATE USER
+  // -----------------------
+  async createUser(email: string, name?: string): Promise<User> {
     const firstName = name?.split(" ")[0] ?? null;
     const lastName = name?.split(" ")[1] ?? null;
 
@@ -50,7 +62,7 @@ export class UsersService {
       .insert(users)
       .values({
         email,
-        passwordHash: "",
+        passwordHash: "", // TODO: replace with hashed password if using credentials auth
         firstName,
         lastName,
         nativeLanguageId: defaultLanguage.id,
@@ -63,10 +75,16 @@ export class UsersService {
       })
       .returning();
 
-    return newUser;
+    return {
+      ...newUser,
+      videoHandles: newUser.videoHandles ?? [],
+    };
   }
 
-  async getProfile(userId: string) {
+  // -----------------------
+  // PROFILE
+  // -----------------------
+  async getProfile(userId: string): Promise<User> {
     const profile = await this.db.query.users.findFirst({
       where: eq(users.id, userId),
     });
@@ -81,7 +99,10 @@ export class UsersService {
     };
   }
 
-  async updateProfile(userId: string, dto: Partial<typeof users.$inferInsert>) {
+  async updateProfile(
+    userId: string,
+    dto: Partial<typeof users.$inferInsert>,
+  ): Promise<User> {
     const [updatedUser] = await this.db
       .update(users)
       .set({
@@ -101,6 +122,9 @@ export class UsersService {
     };
   }
 
+  // -----------------------
+  // BROWSE USERS
+  // -----------------------
   async browseUsers(currentUserId: string, page = 1, limit = 10) {
     const offset = (page - 1) * limit;
     const whereClause = and(ne(users.id, currentUserId));
