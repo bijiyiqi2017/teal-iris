@@ -52,6 +52,6 @@ import { JwtStrategy } from "./strategies/jwt.strategy.js";
     LocalStrategy,
     JwtStrategy, //GoogleStrategy
   ],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
